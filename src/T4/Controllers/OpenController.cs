@@ -7,8 +7,13 @@ namespace T4.Controllers;
 public class OpenController : ControllerBase
 {
     [HttpGet("Echo1")]
-    public ActionResult<string> Echo1([FromQuery] string name)
+    public ActionResult<string> Echo1([FromQuery] string? name)
     {
-        return Content($"Hello {name}");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return BadRequest("The 'name' query parameter is required.");
+        }
+
+        return Content($"Hello {name.Trim()}");
     }
 }
