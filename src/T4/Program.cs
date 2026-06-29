@@ -31,7 +31,7 @@ const string GoogleAlternateIssuer = "accounts.google.com";
 const string BearerPrefix = "Bearer ";
 
 var tokenHandler = new JwtSecurityTokenHandler();
-var issuerSchemeMap = new Dictionary<string, string>(StringComparer.Ordinal)
+var issuerSchemeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 {
     [authority] = DefaultEntraScheme,
     [additionalEntraAuthority] = AdditionalEntraScheme,
@@ -109,15 +109,15 @@ static string SelectAuthenticationScheme(
     JwtSecurityTokenHandler tokenHandler,
     string fallbackScheme)
 {
-    var authorizationHeader = context.Request.Headers.Authorization.FirstOrDefault();
+    var authorizationHeaderValue = context.Request.Headers.Authorization.FirstOrDefault();
 
-    if (string.IsNullOrWhiteSpace(authorizationHeader) ||
-        !authorizationHeader.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
+    if (string.IsNullOrWhiteSpace(authorizationHeaderValue) ||
+        !authorizationHeaderValue.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
     {
         return fallbackScheme;
     }
 
-    var token = authorizationHeader[BearerPrefix.Length..].Trim();
+    var token = authorizationHeaderValue[BearerPrefix.Length..].Trim();
 
     if (string.IsNullOrWhiteSpace(token))
     {
