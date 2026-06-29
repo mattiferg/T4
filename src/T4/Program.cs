@@ -30,8 +30,10 @@ const string GoogleScheme = "Google";
 const string GoogleAlternateIssuer = "accounts.google.com";
 const string BearerPrefix = "Bearer ";
 
+var tokenHandler = new JwtSecurityTokenHandler();
 var issuerSchemeMap = new Dictionary<string, string>(StringComparer.Ordinal)
 {
+    [authority] = DefaultEntraScheme,
     [additionalEntraAuthority] = AdditionalEntraScheme,
     [appleAuthority] = AppleScheme,
     [googleAuthority] = GoogleScheme,
@@ -46,7 +48,7 @@ builder.Services
     })
     .AddPolicyScheme(RouterScheme, RouterScheme, options =>
     {
-        options.ForwardDefaultSelector = context => SelectAuthenticationScheme(context, issuerSchemeMap, DefaultEntraScheme);
+        options.ForwardDefaultSelector = context => SelectAuthenticationScheme(context, issuerSchemeMap, tokenHandler, DefaultEntraScheme);
     })
     .AddJwtBearer(DefaultEntraScheme, options =>
     {
@@ -104,11 +106,13 @@ static string GetRequiredAbsoluteUri(string? value, string key)
 static string SelectAuthenticationScheme(
     HttpContext context,
     IReadOnlyDictionary<string, string> issuerSchemeMap,
+    JwtSecurityTokenHandler tokenHandler,
     string fallbackScheme)
 {
-    var authorizationHeader = context.Request.Headers.Authorization.ToString();
+    var authorizationHeader = context.Request.Headers.Authorization.FirstOrDefault();
 
-    if (!authorizationHeader.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
+    if (string.IsNullOrWhiteSpace(authorizationHeader) ||
+        !authorizationHeader.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
     {
         return fallbackScheme;
     }
@@ -119,8 +123,6 @@ static string SelectAuthenticationScheme(
     {
         return fallbackScheme;
     }
-
-    var tokenHandler = new JwtSecurityTokenHandler();
 
     if (!tokenHandler.CanReadToken(token))
     {
