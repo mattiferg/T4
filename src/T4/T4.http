@@ -1,0 +1,13 @@
+@T4_HostAddress = http://localhost:5044
+@EntraAccessToken = replace-with-entra-access-token
+
+GET {{T4_HostAddress}}/Open/Echo1?name=Matt
+Accept: text/plain
+
+###
+
+GET {{T4_HostAddress}}/Closed/Echo2?name=Matt
+Authorization: ******
+Accept: text/plain
+
+###
