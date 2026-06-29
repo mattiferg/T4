@@ -27,13 +27,15 @@ const string DefaultEntraScheme = "EntraDefault";
 const string AdditionalEntraScheme = "EntraAdditional";
 const string AppleScheme = "Apple";
 const string GoogleScheme = "Google";
+const string GoogleAlternateIssuer = "accounts.google.com";
+const string BearerPrefix = "Bearer ";
 
 var issuerSchemeMap = new Dictionary<string, string>(StringComparer.Ordinal)
 {
     [additionalEntraAuthority] = AdditionalEntraScheme,
     [appleAuthority] = AppleScheme,
     [googleAuthority] = GoogleScheme,
-    ["accounts.google.com"] = GoogleScheme
+    [GoogleAlternateIssuer] = GoogleScheme
 };
 
 builder.Services
@@ -60,7 +62,7 @@ builder.Services
     })
     .AddJwtBearer(GoogleScheme, options =>
     {
-        ConfigureJwtBearer(options, googleAuthority, [googleAudience], [googleAuthority, "accounts.google.com"]);
+        ConfigureJwtBearer(options, googleAuthority, [googleAudience], [googleAuthority, GoogleAlternateIssuer]);
     });
 
 builder.Services.AddAuthorization();
@@ -106,12 +108,12 @@ static string SelectAuthenticationScheme(
 {
     var authorizationHeader = context.Request.Headers.Authorization.ToString();
 
-    if (!authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    if (!authorizationHeader.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase))
     {
         return fallbackScheme;
     }
 
-    var token = authorizationHeader["Bearer ".Length..].Trim();
+    var token = authorizationHeader[BearerPrefix.Length..].Trim();
 
     if (string.IsNullOrWhiteSpace(token))
     {
