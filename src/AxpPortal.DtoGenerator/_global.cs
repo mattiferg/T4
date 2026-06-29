@@ -1,0 +1,5 @@
+﻿// ReSharper disable CheckNamespace
+namespace System.Runtime.CompilerServices
+{
+    static class IsExternalInit;
+}
