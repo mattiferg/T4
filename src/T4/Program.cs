@@ -5,39 +5,18 @@ using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var entra1Authority = GetRequiredAbsoluteUri(builder.Configuration, "Authentication:Entra1:Authority");
-var entra1Audience = GetRequiredValue(builder.Configuration, "Authentication:Entra1:Audience");
-var entra1ValidAuthorityTemplates = builder.Configuration.GetSection("Authentication:Entra1:ValidAuthorityTemplates").Get<string[]>();
+var services = builder.Services;
+var configuration = builder.Configuration;
 
-var entra2Authority = GetRequiredAbsoluteUri(builder.Configuration, "Authentication:Entra2:Authority");
-var entra2Audience = GetRequiredValue(builder.Configuration, "Authentication:Entra2:Audience");
-
-var appleAuthority = GetRequiredAbsoluteUri(builder.Configuration, "Authentication:Apple:Authority");
-var appleAudience = GetRequiredValue(builder.Configuration, "Authentication:Apple:Audience");
-
-var googleAuthority = GetRequiredAbsoluteUri(builder.Configuration, "Authentication:Google:Authority");
-var googleAudience = GetRequiredValue(builder.Configuration, "Authentication:Google:Audience");
+var authenticationConfiguration = configuration.GetRequiredSection("Authentication")
+    .Get<AuthenticationConfiguration>() ?? throw new Exception("Missing or bad 'Authentication' section!");
 
 const string RouterScheme = JwtBearerDefaults.AuthenticationScheme;
-
-const string Entra1Scheme = "Entra1";
-const string Entra2Scheme = "Entra2";
-const string AppleScheme = "Apple";
-const string GoogleScheme = "Google";
-const string GoogleAlternateIssuer = "accounts.google.com";
 const string BearerPrefix = "Bearer ";
 
 var tokenHandler = new JwtSecurityTokenHandler();
-var issuerSchemeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-{
-    [entra1Authority] = Entra1Scheme,
-    [entra2Authority] = Entra2Scheme,
-    [appleAuthority] = AppleScheme,
-    [googleAuthority] = GoogleScheme,
-    [GoogleAlternateIssuer] = GoogleScheme
-};
 
-builder.Services
+var authenticationBuilder = services
     .AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = RouterScheme;
@@ -45,27 +24,20 @@ builder.Services
     })
     .AddPolicyScheme(RouterScheme, RouterScheme, options =>
     {
-        options.ForwardDefaultSelector = context => SelectAuthenticationScheme(context, issuerSchemeMap, tokenHandler, Entra1Scheme);
-    })
-    .AddJwtBearer(Entra1Scheme, options =>
-    {
-        ConfigureJwtBearer(options, Entra1Scheme, entra1Authority, [entra1Audience], entra1ValidAuthorityTemplates);
-    })
-    .AddJwtBearer(Entra2Scheme, options =>
-    {
-        ConfigureJwtBearer(options, Entra2Scheme, entra2Authority, [entra2Audience]);
-    })
-    .AddJwtBearer(AppleScheme, options =>
-    {
-        ConfigureJwtBearer(options, AppleScheme, appleAuthority, [appleAudience]);
-    })
-    .AddJwtBearer(GoogleScheme, options =>
-    {
-        ConfigureJwtBearer(options, GoogleScheme, googleAuthority, [googleAudience], [googleAuthority, GoogleAlternateIssuer]);
+        options.ForwardDefaultSelector = context => SelectAuthenticationScheme(context, authenticationConfiguration, tokenHandler);
     });
+foreach (var authenticationSchema in authenticationConfiguration)
+{
+    var authenticationSchemaName = authenticationSchema.Key;
+    var authenticationSchemaConfig = authenticationSchema.Value;
+    authenticationBuilder.AddJwtBearer(authenticationSchemaName, options =>
+    {
+        ConfigureJwtBearer(options, authenticationSchemaName, authenticationSchemaConfig);
+    });
+}
 
-builder.Services.AddAuthorization();
-builder.Services.AddControllers();
+services.AddAuthorization();
+services.AddControllers();
 
 var app = builder.Build();
 
@@ -103,10 +75,10 @@ static string GetRequiredAbsoluteUri(ConfigurationManager configuration, string 
 
 static string SelectAuthenticationScheme(
     HttpContext context,
-    IReadOnlyDictionary<string, string> issuerSchemeMap,
-    JwtSecurityTokenHandler tokenHandler,
-    string fallbackScheme)
+    AuthenticationConfiguration authenticationConfiguration,
+    JwtSecurityTokenHandler tokenHandler)
 {
+    var fallbackScheme = authenticationConfiguration.GetDefaultSchema();
     var authorizationHeaderValue = context.Request.Headers.Authorization.FirstOrDefault();
 
     if (string.IsNullOrWhiteSpace(authorizationHeaderValue) ||
@@ -129,8 +101,62 @@ static string SelectAuthenticationScheme(
 
     try
     {
-        var issuer = tokenHandler.ReadJwtToken(token).Issuer;
-        return issuerSchemeMap.TryGetValue(issuer, out var scheme) ? scheme : fallbackScheme;
+        var jwtSecurityToken = tokenHandler.ReadJwtToken(token);
+        var issuer = jwtSecurityToken.Issuer;
+        if (issuer == null)
+        {
+            return fallbackScheme;
+        }
+
+        //#1 - Authority match
+        foreach (var authenticationSchema in authenticationConfiguration)
+        {
+            var authenticationSchemaName = authenticationSchema.Key;
+            var authenticationSchemaConfig = authenticationSchema.Value;
+
+            if (issuer.Equals(authenticationSchemaConfig.Authority, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return authenticationSchemaName;
+            }
+        }
+
+        //#2 - Exact issuer match in ValidIssuers
+        foreach (var authenticationSchema in authenticationConfiguration)
+        {
+            var authenticationSchemaName = authenticationSchema.Key;
+            var authenticationSchemaConfig = authenticationSchema.Value;
+
+            var validIssuers = authenticationSchemaConfig.GetValidIssuersWithoutPlaceholders();
+            foreach (var validIssuer in validIssuers)
+            {
+                if (validIssuer.Equals(issuer, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return authenticationSchemaName;
+                }
+            }
+        }
+
+        //#3 - Merged issuer match with tenant id
+        var tenantClaim = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "tid");
+        if (tenantClaim != null)
+        {
+            foreach (var authenticationSchema in authenticationConfiguration)
+            {
+                var authenticationSchemaName = authenticationSchema.Key;
+                var authenticationSchemaConfig = authenticationSchema.Value;
+
+                var mergedValidIssuers = authenticationSchemaConfig.MergeValidIssuersWithTenantId(tenantClaim.Value);
+                foreach (var mergedValidIssuer in mergedValidIssuers)
+                {
+                    if (mergedValidIssuer.Equals(issuer, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return authenticationSchemaName;
+                    }
+                }
+            }
+        }
+
+        return fallbackScheme;
     }
     catch (ArgumentException)
     {
@@ -140,58 +166,78 @@ static string SelectAuthenticationScheme(
 
 static void ConfigureJwtBearer(
     JwtBearerOptions options,
-    string authenticationScheme,
-    string authority,
-    string[] validAudiences,
-    string[]? validIssuers = null)
+    string schemaName,
+    AuthenticationSchemaConfiguration configuration
+    )
 {
-    const string TenantIdPlaceholder = "{tenantid}";
+    var allValidAuthorityTemplates = configuration.ValidIssuers ?? [];
+    var validIssuers = configuration.GetValidIssuersWithoutPlaceholders();
+
+    string authority = configuration.Authority;
 
     options.Authority = authority;
     options.TokenValidationParameters = new TokenValidationParameters
     {
+        DebugId = schemaName,
+
         ValidateIssuer = true,
-        ValidIssuers = validIssuers ?? [authority],
+        ValidIssuers = validIssuers.Length > 0 ? validIssuers : [authority],
         ValidateAudience = true,
-        ValidAudiences = validAudiences,
+        ValidAudiences = [configuration.Audience],
 
-        IssuerValidator = (issuer, securityToken, validationParameters) =>
+        IssuerValidator = allValidAuthorityTemplates.Any() ? IssuerValidator : null,
+    };
+    return;
+
+    string IssuerValidator(string issuer, SecurityToken securityToken, TokenValidationParameters validationParameters)
+    {
+#if(DEBUG)
+        var s = schemaName.ToString();
+#endif
+        //#1 - Authority match
+        if (configuration.Authority.Equals(issuer, StringComparison.InvariantCultureIgnoreCase))
         {
-            authenticationScheme.ToString();
-            if (securityToken is JsonWebToken jwt2)
-            {
-                if (jwt2.TryGetClaim("tid", out var tenantClaim) &&
-                    tenantClaim?.Value is { } tokenTenantId)
-                {
-                    var allValidIssuers = (validationParameters.ValidIssuers ?? Enumerable.Empty<string>())
-                        .Append(validationParameters.ValidIssuer)
-                        .Where(i => !string.IsNullOrEmpty(i));
+            return issuer;
+        }
 
-                    foreach (var i in allValidIssuers)
-                    {
-                        if (i.Replace(TenantIdPlaceholder, tokenTenantId, StringComparison.OrdinalIgnoreCase) == issuer)
-                        {
-                            return issuer;
-                        }
-                        else
-                        {
-                        }
-                    }
+        if (securityToken is JsonWebToken jwt2)
+        {
+            //#2 - Exact issuer match in ValidIssuers
+            var validAuthorities = configuration.GetValidIssuersWithoutPlaceholders();
+            foreach (var validAuthority in validAuthorities)
+            {
+                if (validAuthority.Equals(issuer, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return issuer;
                 }
             }
 
-            // Recreate the exception that is thrown by default
-            // when issuer validation fails
-            var validIssuer = validationParameters.ValidIssuer ?? "null";
-            var validIssuers = validationParameters.ValidIssuers == null
-                ? "null"
-                : !validationParameters.ValidIssuers.Any()
-                    ? "empty"
-                    : string.Join(", ", validationParameters.ValidIssuers);
-            string errorMessage = FormattableString.Invariant(
-                $"IDX10205: Issuer validation failed. Issuer: '{issuer}'. Did not match: validationParameters.ValidIssuer: '{validIssuer}' or validationParameters.ValidIssuers: '{validIssuers}'.");
-
-            throw new SecurityTokenInvalidIssuerException(errorMessage) { InvalidIssuer = issuer };
+            //#3 - Merged issuer match with tenant id
+            if (jwt2.TryGetClaim("tid", out var tenantClaim) &&
+                tenantClaim?.Value is { } tokenTenantId)
+            {
+                var mergedValidAuthorities = configuration.MergeValidIssuersWithTenantId(tokenTenantId);
+                foreach (var mergedValidAuthority in mergedValidAuthorities)
+                {
+                    if (mergedValidAuthority.Equals(issuer, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return issuer;
+                    }
+                }
+            }
         }
-    };
+
+        // Recreate the exception that is thrown by default
+        // when issuer validation fails
+        var validIssuer = validationParameters.ValidIssuer ?? "null";
+        var validIssuers = validationParameters.ValidIssuers == null
+            ? "null"
+            : !validationParameters.ValidIssuers.Any()
+                ? "empty"
+                : string.Join(", ", validationParameters.ValidIssuers);
+        string errorMessage = FormattableString.Invariant(
+            $"IDX10205: Issuer validation failed. Issuer: '{issuer}'. Did not match: validationParameters.ValidIssuer: '{validIssuer}' or validationParameters.ValidIssuers: '{validIssuers}'.");
+
+        throw new SecurityTokenInvalidIssuerException(errorMessage) { InvalidIssuer = issuer };
+    }
 }
