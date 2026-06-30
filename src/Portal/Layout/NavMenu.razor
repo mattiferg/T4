@@ -24,6 +24,27 @@
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
             </NavLink>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="api-operations">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> API Operations
+            </NavLink>
+        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <a class="nav-link" href="authentication/logout">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Logout
+                    </a>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <a class="nav-link" href="authentication/login">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Login
+                    </a>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 

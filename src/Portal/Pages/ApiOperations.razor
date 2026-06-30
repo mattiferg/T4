@@ -1,0 +1,108 @@
+@page "/api-operations"
+@attribute [Authorize]
+@inject HttpClient ApiClient
+@using System.Text
+
+<PageTitle>T4 API Operations</PageTitle>
+
+<h1>T4 API Operations</h1>
+
+<p>Use these actions to call the T4 <code>Users</code> API endpoints with your Entra token.</p>
+
+<div class="mb-4">
+    <label for="requestUserInvitePayload">RequestUserInvite payload</label>
+    <textarea id="requestUserInvitePayload" class="form-control" rows="4" @bind="requestUserInvitePayload"></textarea>
+    <button class="btn btn-primary mt-2" @onclick='() => CallOperationAsync("RequestUserInvite", requestUserInvitePayload)'>Call RequestUserInvite</button>
+    <pre>@requestUserInviteResponse</pre>
+</div>
+
+<div class="mb-4">
+    <label for="registerUserPayload">RegisterUser payload</label>
+    <textarea id="registerUserPayload" class="form-control" rows="4" @bind="registerUserPayload"></textarea>
+    <button class="btn btn-primary mt-2" @onclick='() => CallOperationAsync("RegisterUser", registerUserPayload)'>Call RegisterUser</button>
+    <pre>@registerUserResponse</pre>
+</div>
+
+<div class="mb-4">
+    <label for="getUserPayload">GetUser payload</label>
+    <textarea id="getUserPayload" class="form-control" rows="4" @bind="getUserPayload"></textarea>
+    <button class="btn btn-primary mt-2" @onclick='() => CallOperationAsync("GetUser", getUserPayload)'>Call GetUser</button>
+    <pre>@getUserResponse</pre>
+</div>
+
+<div class="mb-4">
+    <label for="makeCustomCallPayload">MakeCustomCall payload</label>
+    <textarea id="makeCustomCallPayload" class="form-control" rows="4" @bind="makeCustomCallPayload"></textarea>
+    <button class="btn btn-primary mt-2" @onclick='() => CallOperationAsync("MakeCustomCall", makeCustomCallPayload)'>Call MakeCustomCall</button>
+    <pre>@makeCustomCallResponse</pre>
+</div>
+
+@code {
+    private string requestUserInvitePayload = """
+    {
+      "email": "user@example.com",
+      "name": "Sample User",
+      "message": "Welcome!"
+    }
+    """;
+
+    private string registerUserPayload = """
+    {
+      "inviteCode": "replace-with-invite-code",
+      "nameOrDescription": "Sample User"
+    }
+    """;
+
+    private string getUserPayload = "{}";
+
+    private string makeCustomCallPayload = """
+    {
+      "customCallName": "replace-with-custom-call-name",
+      "payload": {}
+    }
+    """;
+
+    private string requestUserInviteResponse = string.Empty;
+    private string registerUserResponse = string.Empty;
+    private string getUserResponse = string.Empty;
+    private string makeCustomCallResponse = string.Empty;
+
+    private async Task CallOperationAsync(string operation, string payload)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"Users/{operation}")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+
+        try
+        {
+            using var response = await ApiClient.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var formattedResult = $"Status: {(int)response.StatusCode} {response.ReasonPhrase}\n\n{responseBody}";
+            SetOperationResponse(operation, formattedResult);
+        }
+        catch (Exception ex)
+        {
+            SetOperationResponse(operation, $"Request failed: {ex.Message}");
+        }
+    }
+
+    private void SetOperationResponse(string operation, string result)
+    {
+        switch (operation)
+        {
+            case "RequestUserInvite":
+                requestUserInviteResponse = result;
+                break;
+            case "RegisterUser":
+                registerUserResponse = result;
+                break;
+            case "GetUser":
+                getUserResponse = result;
+                break;
+            case "MakeCustomCall":
+                makeCustomCallResponse = result;
+                break;
+        }
+    }
+}
