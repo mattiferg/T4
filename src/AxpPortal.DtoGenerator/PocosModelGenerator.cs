@@ -18,7 +18,7 @@ public sealed class PocosModelGenerator : IIncrementalGenerator
 
         new("AxpPortalApiRequstBase", true, GenBuildApiRequest1),
         new("AxpPortalApiAuthorisedRequstBase", true, GenBuildApiRequest2),
-        new("AxpPortalApiResponseBase", false, GenBuildApiRequest3),
+        new("AxpPortalApiResponseBase", false),
     ];
 
     private static string GenBuildApiRequest1(ClassCandidate candidate, IReadOnlyDictionary<string, ClassCandidate> map)
@@ -58,29 +58,6 @@ public sealed class PocosModelGenerator : IIncrementalGenerator
         {
             var propertyName = property.Identifier.Text;
             sb.AppendLine($"                {propertyName} = this.{propertyName},");
-        }
-
-        sb.AppendLine(@"            };");
-        sb.AppendLine("        }");
-
-        return sb.ToString();
-    }
-
-    private static string GenBuildApiRequest3(ClassCandidate candidate, IReadOnlyDictionary<string, ClassCandidate> map)
-    {
-        StringBuilder sb = new();
-        sb.AppendLine($"        public {candidate.ModelClassName} FromApiResponse({ContractsNamespace}.{candidate.ClassName} apiResponse)");
-        sb.AppendLine("        {");
-        sb.AppendLine($"            return new {candidate.ModelClassName}");
-        sb.AppendLine(@"            {");
-        sb.AppendLine(@"                Succeeded = apiResponse.Succeeded,");
-        sb.AppendLine(@"                Feedback = apiResponse.Feedback,");
-        sb.AppendLine();
-
-        foreach (var property in candidate.Properties)
-        {
-            var propertyName = property.Identifier.Text;
-            sb.AppendLine($"                {propertyName} = apiResponse.{propertyName},");
         }
 
         sb.AppendLine(@"            };");
