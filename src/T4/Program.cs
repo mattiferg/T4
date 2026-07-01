@@ -18,8 +18,15 @@ public static class Program
         AxClient.AxClientRegistrar.RegisterServices(services, configuration);
 
         services.AddAuthorization();
+        services.AddControllers().AddNewtonsoftJson(options =>
+        {
+            //options.UseMemberCasing();
+            //if (options.SerializerSettings.ContractResolver is DefaultContractResolver defaultContractResolver)
+            //{
+            //    defaultContractResolver.NamingStrategy = new DefaultNamingStrategy();
+            //}
+        });
         services.AddOpenApi();
-        services.AddControllers().AddNewtonsoftJson();
         services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
@@ -31,6 +38,12 @@ public static class Program
         });
 
         var app = builder.Build();
+
+        app.Use(async (context, next) =>
+        {
+            context.Request.EnableBuffering();
+            await next();
+        });
 
         if (app.Environment.IsDevelopment())
         {

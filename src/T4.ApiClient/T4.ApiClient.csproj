@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\AxClient\Generated\AxpPortal.DtoGenerator\AxpPortal.DtoGenerator.PocosModelGenerator\T4.AxClient.Model.A.g.cs" Link="_CodeGen.cs" />
+    <Compile Remove="Exceptions\AxRequestNotSucceededException.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\AxClient\Generated\AxpPortal.DtoGenerator\AxpPortal.DtoGenerator.PocosModelGenerator\T4.AxClient.Model.A.g.cs" Link="Model\_CodeGen.cs" />
+    <Compile Include="..\AxClient\Model\ErrorFeedbackContract.cs" Link="Model\ErrorFeedbackContract.cs" />
   </ItemGroup>
 
   <ItemGroup>

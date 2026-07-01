@@ -3,6 +3,7 @@
 @inject IT4ApiClient ApiClient
 @using System.Text
 @using Newtonsoft.Json
+@using T4.ApiClient.Exceptions
 @using T4.ApiClient.Services
 @using T4.AxClient.Model
 
@@ -86,13 +87,12 @@
 
         try
         {
-            /*
-            using var response = await ApiClient.SendAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
-            var formattedResult = $"Status: {(int)response.StatusCode} {response.ReasonPhrase}\n\n{responseBody}";
-            */
             var formattedResult = await DoOperation(operation, payload);
             SetOperationResponse(operation, formattedResult);
+        }
+        catch (ApiRequestNotSucceededException ex)
+        {
+            SetOperationResponse(operation, $"Request failed: {ex.ErrorFeedbackContract.Message}");
         }
         catch (Exception ex)
         {

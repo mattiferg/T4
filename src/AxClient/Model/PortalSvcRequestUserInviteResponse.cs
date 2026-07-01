@@ -6,8 +6,8 @@ partial class PortalSvcRequestUserInviteResponse
     {
         return new PortalSvcRequestUserInviteResponse
         {
-            Succeeded = apiResponse.Succeeded,
-            Feedback = apiResponse.Feedback
+            //Succeeded = apiResponse.Succeeded,
+            //Feedback = apiResponse.Feedback
         };
     }
 }

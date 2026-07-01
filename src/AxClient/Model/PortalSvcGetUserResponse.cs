@@ -6,8 +6,8 @@ partial class PortalSvcGetUserResponse
     {
         return new PortalSvcGetUserResponse
         {
-            Succeeded = apiResponse.Succeeded,
-            Feedback = apiResponse.Feedback,
+            //Succeeded = apiResponse.Succeeded,
+            //Feedback = apiResponse.Feedback,
 
             User = AxpPortalUserContract.FromApiResponse(apiResponse.User)
         };

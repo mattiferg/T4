@@ -6,8 +6,8 @@ partial class PortalSvcMakeCustomCallResponse
     {
         return new PortalSvcMakeCustomCallResponse
         {
-            Succeeded = apiResponse.Succeeded,
-            Feedback = apiResponse.Feedback,
+            //Succeeded = apiResponse.Succeeded,
+            //Feedback = apiResponse.Feedback,
 
             Payload = apiResponse.Payload
         };

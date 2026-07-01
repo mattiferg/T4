@@ -18,7 +18,7 @@ public sealed class PocosModelGenerator : IIncrementalGenerator
 
         new("AxpPortalApiRequstBase", true, GenBuildApiRequest1),
         new("AxpPortalApiAuthorisedRequstBase", true, GenBuildApiRequest2),
-        new("AxpPortalApiResponseBase", false),
+        new("AxpPortalApiResponseBase", true),
     ];
 
     private static string GenBuildApiRequest1(ClassCandidate candidate, IReadOnlyDictionary<string, ClassCandidate> map)

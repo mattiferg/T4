@@ -8,7 +8,7 @@ using T4.AxClient.Services;
 namespace T4.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api")]
 public class UsersController : ControllerBase
 {
     private readonly IAxpPortalApiService _axpPortalApiService;
@@ -41,7 +41,7 @@ public class UsersController : ControllerBase
         }
         catch (AxRequestNotSucceededException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(ex.ErrorFeedbackContract);
         }
     }
 
@@ -80,9 +80,15 @@ public class UsersController : ControllerBase
 
     [Authorize]
     [HttpPost("MakeCustomCall")]
-    public Task<ActionResult<PortalSvcMakeCustomCallResponse>> MakeCustomCall([FromBody] PortalSvcMakeCustomCallRequest request, CancellationToken token)
+    public async Task<ActionResult<PortalSvcMakeCustomCallResponse>> MakeCustomCall([FromBody] PortalSvcMakeCustomCallRequest request, CancellationToken token)
     {
-        return WhileHandlingAxErrors(async () =>
+        this.Request.Body.Seek(0, SeekOrigin.Begin);
+        using (var streamReader = new StreamReader(this.Request.Body))
+        {
+            var bodyText = await streamReader.ReadToEndAsync(token);
+            Console.WriteLine($"Request Body: {bodyText}");
+        }
+        return await WhileHandlingAxErrors(async () =>
         {
             var response = await _axpPortalApiService.MakeCustomCall(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
             return PortalSvcMakeCustomCallResponse.FromApiResponse(response);

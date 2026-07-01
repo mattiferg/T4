@@ -1,5 +1,7 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
+using T4.ApiClient.Exceptions;
 using T4.AxClient.Model;
 
 #pragma warning disable CA1068
@@ -23,7 +25,7 @@ partial class T4ApiClient : IT4ApiClient
     {
         var payload = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"Users/{operationName}")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/{operationName}")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
@@ -32,7 +34,19 @@ partial class T4ApiClient : IT4ApiClient
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception(response.ReasonPhrase);
+            var errorBody = await response.Content.ReadAsStringAsync(token);
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.BadRequest:
+                    var errorFeedback = Newtonsoft.Json.JsonConvert.DeserializeObject<ErrorFeedbackContract>(errorBody);
+                    if (errorFeedback != null)
+                    {
+                        throw new ApiRequestNotSucceededException(errorFeedback);
+                    }
+                    break;
+            }
+
+            throw new Exception("~~" + response.StatusCode + ":" + response.ReasonPhrase + "~~" + errorBody);
         }
 
         var responseBody = await response.Content.ReadAsStringAsync(token);
