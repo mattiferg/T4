@@ -1,8 +1,9 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Components;
 using Portal;
+using T4.ApiClient;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -25,6 +26,8 @@ builder.Services.AddHttpClient("T4Api", client => client.BaseAddress = new Uri(t
     .AddHttpMessageHandler<T4ApiAuthorizationMessageHandler>();
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("T4Api"));
+
+ApiClientRegistrar.RegisterServices(builder.Services);
 
 await builder.Build().RunAsync();
 

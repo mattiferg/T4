@@ -1,0 +1,1 @@
+﻿global using Axponent.AxPocoInterop.AxTypes;

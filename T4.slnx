@@ -1,8 +1,7 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Portal/Portal.csproj" />
-    <Project Path="src/T4/T4.csproj" />
-  </Folder>
+  <Project Path="src/Portal/Portal.csproj" />
+  <Project Path="src/T4/T4.csproj" />
   <Project Path="src/AxClient/T4.AxClient.csproj" />
   <Project Path="src/AxpPortal.DtoGenerator/AxpPortal.DtoGenerator.csproj" />
+  <Project Path="src/T4.ApiClient/T4.ApiClient.csproj" />
 </Solution>

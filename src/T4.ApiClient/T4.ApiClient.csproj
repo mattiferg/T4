@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\AxClient\Generated\AxpPortal.DtoGenerator\AxpPortal.DtoGenerator.PocosModelGenerator\T4.AxClient.Model.A.g.cs" Link="_CodeGen.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Axponent.AxPocoInterop" Version="1.3.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+</Project>

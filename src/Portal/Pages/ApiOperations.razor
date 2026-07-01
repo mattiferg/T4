@@ -1,7 +1,10 @@
 @page "/api-operations"
 @attribute [Authorize]
-@inject HttpClient ApiClient
+@inject IT4ApiClient ApiClient
 @using System.Text
+@using Newtonsoft.Json
+@using T4.ApiClient.Services
+@using T4.AxClient.Model
 
 <PageTitle>T4 API Operations</PageTitle>
 
@@ -38,6 +41,13 @@
 </div>
 
 @code {
+
+
+
+
+
+
+
     private string requestUserInvitePayload = """
     {
       "email": "user@example.com",
@@ -76,15 +86,55 @@
 
         try
         {
+            /*
             using var response = await ApiClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
             var formattedResult = $"Status: {(int)response.StatusCode} {response.ReasonPhrase}\n\n{responseBody}";
+            */
+            var formattedResult = await DoOperation(operation, payload);
             SetOperationResponse(operation, formattedResult);
         }
         catch (Exception ex)
         {
             SetOperationResponse(operation, $"Request failed: {ex}");
         }
+    }
+
+    private async Task<string> DoOperation(string operation, string payload)
+    {
+        switch (operation)
+        {
+            case "RequestUserInvite":
+                {
+                    var deserializeObject = Newtonsoft.Json.JsonConvert.DeserializeObject<PortalSvcRequestUserInviteRequest>(payload)!;
+                    var response = await ApiClient.RequestUserInvite(CancellationToken.None, deserializeObject);
+
+                    return Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+                }
+            case "RegisterUser":
+                {
+                    var deserializeObject = Newtonsoft.Json.JsonConvert.DeserializeObject<PortalSvcRegisterUserRequest>(payload)!;
+                    var response = await ApiClient.RegisterUser(CancellationToken.None, deserializeObject);
+
+                    return Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+                }
+            case "GetUser":
+                {
+                    var deserializeObject = Newtonsoft.Json.JsonConvert.DeserializeObject<PortalSvcGetUserRequest>(payload)!;
+                    var response = await ApiClient.GetUser(CancellationToken.None, deserializeObject);
+
+                    return Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+                }
+            case "MakeCustomCall":
+                {
+                    var deserializeObject = Newtonsoft.Json.JsonConvert.DeserializeObject<PortalSvcMakeCustomCallRequest>(payload)!;
+                    var response = await ApiClient.MakeCustomCall(CancellationToken.None, deserializeObject);
+
+                    return Newtonsoft.Json.JsonConvert.SerializeObject(response, Formatting.Indented);
+                }
+        }
+
+        throw new ArgumentException($"'{operation}' is not an operation name!", nameof(operation));
     }
 
     private void SetOperationResponse(string operation, string result)
