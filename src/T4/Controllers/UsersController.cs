@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using T4.AxClient.Contracts;
+using T4.AxClient.Exceptions;
 using T4.AxClient.Model;
 using T4.AxClient.Services;
 
 namespace T4.Controllers;
 
 [ApiController]
-[Authorize]
 [Route("[controller]")]
 public class UsersController : ControllerBase
 {
@@ -18,36 +18,74 @@ public class UsersController : ControllerBase
         _axpPortalApiService = axpPortalApiService;
     }
 
-    private static AxpPortalApiUserKey GetUserKey()
+    private AxpPortalApiUserKey GetUserKey()
     {
-        return new AxpPortalApiUserKey();
+        var identityInfo = new AuthenticatedUserIdentityResolver(User).Resolve();
+        if (identityInfo == null)
+        {
+            throw new Exception("No valid identity!!");
+        }
+
+        return new AxpPortalApiUserKey
+        {
+            OAuthProviderName = identityInfo.ProviderName,
+            OAuthUserIdentifier = identityInfo.ProviderUserId
+        };
     }
 
-    [HttpGet("RequestUserInvite")]
-    public async Task<PortalSvcRequestUserInviteResponse> RequestUserInvite([FromBody] PortalSvcRequestUserInviteRequest request, CancellationToken token)
+    private async Task<ActionResult<T>> WhileHandlingAxErrors<T>(Func<Task<T>> func) where T : class
     {
-        var response = await _axpPortalApiService.RequestUserInvite(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId));
-        return PortalSvcRequestUserInviteResponse.FromApiResponse(response);
+        try
+        {
+            return await func();
+        }
+        catch (AxRequestNotSucceededException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    [HttpGet("RegisterUser")]
-    public async Task<PortalSvcRegisterUserResponse> RegisterUser([FromBody] PortalSvcRegisterUserRequest request, CancellationToken token)
+    [HttpPost("RequestUserInvite")]
+    public Task<ActionResult<PortalSvcRequestUserInviteResponse>> RequestUserInvite([FromBody] PortalSvcRequestUserInviteRequest request, CancellationToken token)
     {
-        var response = await _axpPortalApiService.RegisterUser(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
-        return PortalSvcRegisterUserResponse.FromApiResponse(response);
+        return WhileHandlingAxErrors(async () =>
+        {
+            var response = await _axpPortalApiService.RequestUserInvite(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId));
+            return PortalSvcRequestUserInviteResponse.FromApiResponse(response);
+        });
     }
 
-    [HttpGet("GetUser")]
-    public async Task<PortalSvcGetUserResponse> GetUser([FromBody] PortalSvcGetUserRequest request, CancellationToken token)
+    [Authorize]
+    [HttpPost("RegisterUser")]
+    public Task<ActionResult<PortalSvcRegisterUserResponse>> RegisterUser([FromBody] PortalSvcRegisterUserRequest request, CancellationToken token)
     {
-        var response = await _axpPortalApiService.GetUser(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
-        return PortalSvcGetUserResponse.FromApiResponse(response);
+        return WhileHandlingAxErrors(async () =>
+        {
+            var response = await _axpPortalApiService.RegisterUser(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
+            return PortalSvcRegisterUserResponse.FromApiResponse(response);
+        });
     }
 
-    [HttpGet("MakeCustomCall")]
-    public async Task<PortalSvcMakeCustomCallResponse> MakeCustomCall([FromBody] PortalSvcMakeCustomCallRequest request, CancellationToken token)
+    [Authorize]
+    [HttpPost("GetUser")]
+    public Task<ActionResult<PortalSvcGetUserResponse>> GetUser([FromBody] PortalSvcGetUserRequest request, CancellationToken token)
     {
-        var response = await _axpPortalApiService.MakeCustomCall(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
-        return PortalSvcMakeCustomCallResponse.FromApiResponse(response);
+        return WhileHandlingAxErrors(async () =>
+        {
+            var response = await _axpPortalApiService.GetUser(token,
+                request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
+            return PortalSvcGetUserResponse.FromApiResponse(response);
+        });
+    }
+
+    [Authorize]
+    [HttpPost("MakeCustomCall")]
+    public Task<ActionResult<PortalSvcMakeCustomCallResponse>> MakeCustomCall([FromBody] PortalSvcMakeCustomCallRequest request, CancellationToken token)
+    {
+        return WhileHandlingAxErrors(async () =>
+        {
+            var response = await _axpPortalApiService.MakeCustomCall(token, request.BuildApiRequest(_axpPortalApiService.PortalWebsiteId, GetUserKey()));
+            return PortalSvcMakeCustomCallResponse.FromApiResponse(response);
+        });
     }
 }

@@ -69,7 +69,7 @@
 
     private async Task CallOperationAsync(string operation, string payload)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"Users/{operation}")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"Users/{operation}")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
@@ -83,7 +83,7 @@
         }
         catch (Exception ex)
         {
-            SetOperationResponse(operation, $"Request failed: {ex.Message}");
+            SetOperationResponse(operation, $"Request failed: {ex}");
         }
     }
 

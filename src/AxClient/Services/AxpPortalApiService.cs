@@ -1,11 +1,36 @@
-﻿namespace T4.AxClient.Services;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Runtime.CompilerServices;
+using T4.AxClient.Contracts;
+
+namespace T4.AxClient.Services;
 
 partial class AxpPortalApiService : IAxpPortalApiService
 {
-    public string PortalWebsiteId { get; } = "DEV";
+    private const string ServiceGroupName = "AxpPortalApi";
+    private const string ServiceName = "Api";
 
-    private Task<T> MakeRequest<T>(CancellationToken token, object payload)
+    private readonly IAxCallingService _axCallingService;
+    private readonly ILogger _logger;
+
+    public AxpPortalApiService(IAxCallingService axCallingService, ILogger<AxpPortalApiService> logger, IConfiguration rawConfiguration)
     {
-        throw new NotImplementedException();
+        _axCallingService = axCallingService;
+        _logger = logger;
+        PortalWebsiteId = rawConfiguration["PortalWebsiteId"];
+    }
+
+    public string PortalWebsiteId => field ?? throw new InvalidOperationException("Missing configuration value 'PortalWebsiteId' required for AX portal requests.");
+
+    private async Task<T> MakeRequest<T>(CancellationToken token, object request, [CallerMemberName] string operationName = "")
+        where T : AxpPortalApiResponseBase, new()
+    {
+        var ret = await _axCallingService.MakeRequest<T>(ServiceGroupName, ServiceName, operationName, request, token);
+        if (!ret.Succeeded)
+        {
+            _logger.LogError("Failure in AX call to {opName}: {feedback}", operationName, ret.Feedback);
+        }
+
+        return ret;
     }
 }

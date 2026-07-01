@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "API and CLient",
+    "Projects": [
+      {
+        "Path": "src\\Portal\\Portal.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\T4\\T4.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
