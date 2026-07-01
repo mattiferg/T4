@@ -7,11 +7,11 @@ using T4.AxClient.Model;
 #pragma warning disable CA1068
 namespace T4.ApiClient.Services;
 
-partial class T4ApiClient : IT4ApiClient
+partial class AxpPortalGatewayClient : IAxpPortalGatewayClient
 {
     private readonly HttpClient _httpClient;
 
-    public T4ApiClient(HttpClient httpClient)
+    public AxpPortalGatewayClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
@@ -53,16 +53,4 @@ partial class T4ApiClient : IT4ApiClient
         var responseData = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(responseBody);
         return responseData!;
     }
-}
-
-public interface IT4ApiClient
-{
-    Task<HttpResponseMessage> SendAsync(HttpRequestMessage request);
-
-    public Task<PortalSvcGetApiConfigResponse> GetApiConfig(CancellationToken token, PortalSvcGetApiConfigRequest request);
-    public Task<PortalSvcRequestUserInviteResponse> RequestUserInvite(CancellationToken token, PortalSvcRequestUserInviteRequest request);
-    public Task<PortalSvcGetUserInviteResponse> GetUserInvite(CancellationToken token, PortalSvcGetUserInviteRequest request);
-    public Task<PortalSvcRegisterUserResponse> RegisterUser(CancellationToken token, PortalSvcRegisterUserRequest request);
-    public Task<PortalSvcGetUserResponse> GetUser(CancellationToken token, PortalSvcGetUserRequest request);
-    public Task<PortalSvcMakeCustomCallResponse> MakeCustomCall(CancellationToken token, PortalSvcMakeCustomCallRequest request);
 }

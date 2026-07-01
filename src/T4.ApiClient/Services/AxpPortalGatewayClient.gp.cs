@@ -3,7 +3,7 @@
 #pragma warning disable CA1068
 namespace T4.ApiClient.Services;
 
-partial class T4ApiClient
+partial class AxpPortalGatewayClient
 {
     public Task<PortalSvcGetApiConfigResponse> GetApiConfig(CancellationToken token, PortalSvcGetApiConfigRequest request)
     {
@@ -27,7 +27,6 @@ partial class T4ApiClient
 
     public Task<PortalSvcGetUserResponse> GetUser(CancellationToken token, PortalSvcGetUserRequest request)
     {
-        Console.WriteLine("GetUser[]");
         return this.MakeRequest<PortalSvcGetUserResponse>(token, request);
     }
 

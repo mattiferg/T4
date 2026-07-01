@@ -7,6 +7,6 @@ public static class ApiClientRegistrar
 {
     public static void RegisterServices(IServiceCollection services)
     {
-        services.AddScoped<IT4ApiClient, T4ApiClient>();
+        services.AddScoped<IAxpPortalGatewayClient, AxpPortalGatewayClient>();
     }
 }
